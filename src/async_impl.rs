@@ -131,6 +131,19 @@ where
         Err(BmeError::MeasuringTimeOut)
     }
 
+    pub async fn measure_once(&mut self) -> Result<MeasurmentData, BmeError<I2C>> {
+        let state = self.state.as_mut().ok_or(BmeError::Uninitialized)?;
+        let raw_data = self.i2c.get_field_data().await?;
+        if let Some(data) =
+            MeasurmentData::from_raw(raw_data, &state.calibration_data, &state.variant)
+        {
+            // update the current ambient temperature which is needed to calculate the target heater temp
+            self.i2c.ambient_temperature = data.temperature as i32;
+            return Ok(data);
+        }
+        Err(BmeError::MeasuringTimeOut)
+    }
+
     pub fn get_calibration_data(&self) -> Result<&CalibrationData, BmeError<I2C>> {
         Ok(&self
             .state
