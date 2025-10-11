@@ -35,7 +35,7 @@ pub struct CalibrationData {
 }
 
 /// Measurment data returned from the sensor
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct MeasurmentData {
     /// Temperature in °C
