@@ -240,10 +240,11 @@ impl Configuration {
         }
         let mut measurement_duration = measurement_cycles * CYCLE_DURATION;
 
-        // https://github.com/adafruit/Adafruit_BME680/blob/master/Adafruit_BME680.cpp#L311
-        if let Some(gas_config) = &self.gas_config {
-            measurement_duration += gas_config.heater_duration().as_micros() as u32;
-        }
+        // // not used in bsec?!
+        // // https://github.com/adafruit/Adafruit_BME680/blob/master/Adafruit_BME680.cpp#L311
+        // if let Some(gas_config) = &self.gas_config {
+        //     measurement_duration += gas_config.heater_duration().as_micros() as u32;
+        // }
 
         measurement_duration += TPH_SWITCHING_DURATION;
         measurement_duration += GAS_MEAS_DURATION;
