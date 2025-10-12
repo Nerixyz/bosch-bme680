@@ -66,7 +66,7 @@ where
         i2c_interface: I2C,
         device_address: DeviceAddress,
         delayer: D,
-        ambient_temperature: i32,
+        ambient_temperature: i8,
     ) -> Self {
         let i2c = I2CHelper::new(i2c_interface, device_address, delayer, ambient_temperature);
 
@@ -116,15 +116,15 @@ where
 
         self.i2c.delay(delay_period).await;
         // try read new values 5 times and delay if no new data is available or the sensor is still measuring
-        for _i in 0..5 {
+        for _i in 0..100 {
             let raw_data = self.i2c.get_field_data().await?;
             match MeasurmentData::from_raw(raw_data, &state.calibration_data, &state.variant) {
                 Some(data) => {
                     // update the current ambient temperature which is needed to calculate the target heater temp
-                    self.i2c.ambient_temperature = data.temperature as i32;
+                    self.i2c.ambient_temperature = data.temperature as i8;
                     return Ok(data);
                 }
-                None => self.i2c.delay(delay_period).await,
+                None => self.i2c.delay(5 * 1000).await,
             }
         }
         // Shouldn't happen
@@ -138,7 +138,7 @@ where
             MeasurmentData::from_raw(raw_data, &state.calibration_data, &state.variant)
         {
             // update the current ambient temperature which is needed to calculate the target heater temp
-            self.i2c.ambient_temperature = data.temperature as i32;
+            self.i2c.ambient_temperature = data.temperature as i8;
             return Ok(data);
         }
         Err(BmeError::MeasuringTimeOut)
