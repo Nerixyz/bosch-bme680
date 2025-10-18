@@ -89,7 +89,7 @@ where
         device_address: DeviceAddress,
         delayer: D,
         sensor_config: &Configuration,
-        ambient_temperature: i8,
+        ambient_temperature: i32,
     ) -> Result<Self, BmeError<I2C>> {
         let mut i2c = I2CHelper::new(i2c_interface, device_address, delayer, ambient_temperature)?;
 
@@ -136,7 +136,7 @@ where
             match MeasurmentData::from_raw(raw_data, &self.calibration_data, &self.variant) {
                 Some(data) => {
                     // update the current ambient temperature which is needed to calculate the target heater temp
-                    self.i2c.ambient_temperature = data.temperature as i8;
+                    self.i2c.ambient_temperature = data.temperature as i32;
                     return Ok(data);
                 }
                 None => self.i2c.delay(delay_period),

@@ -31,7 +31,7 @@ pub struct I2CHelper<I2C, D> {
     i2c_interface: I2C,
     address: u8,
     delayer: D,
-    pub ambient_temperature: i8,
+    pub ambient_temperature: i32,
 }
 impl<I2C, D> I2CHelper<I2C, D>
 where
@@ -42,7 +42,7 @@ where
         i2c_interface: I2C,
         device_address: DeviceAddress,
         delayer: D,
-        ambient_temperature: i8,
+        ambient_temperature: i32,
     ) -> Result<Self, BmeError<I2C>> {
         Self {
             i2c_interface,

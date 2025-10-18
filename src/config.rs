@@ -2,13 +2,11 @@ use core::time::Duration;
 
 use log::warn;
 
-use crate::constants::{
-    CYCLE_DURATION, GAS_MEAS_DURATION, TPH_SWITCHING_DURATION, WAKEUP_DURATION,
-};
 use crate::{
     constants::{GAS_ARRAY_1, GAS_ARRAY_2, MAX_HEATER_TEMPERATURE, MAX_HEATER_WAIT_DURATION_MS},
     data::CalibrationData,
 };
+use crate::constants::{CYCLE_DURATION, GAS_MEAS_DURATION, TPH_SWITCHING_DURATION, WAKEUP_DURATION};
 
 /// Use Primary if SDO connector of the sensor is connected to ground and Secondary if SDO is connected to Vin.
 #[repr(u8)]
@@ -128,8 +126,7 @@ impl GasConfig {
         }
     }
 
-    #[must_use]
-    pub fn calc_gas_wait(&self) -> u8 {
+    #[must_use] pub fn calc_gas_wait(&self) -> u8 {
         let mut duration = self.heater_duration.as_millis() as u16;
         let mut factor: u8 = 0;
 
@@ -144,8 +141,11 @@ impl GasConfig {
             duration as u8 + factor * 64
         }
     }
-    #[must_use]
-    pub fn calc_res_heat(&self, calibration_data: &CalibrationData, ambient_temperature: i8) -> u8 {
+    #[must_use] pub fn calc_res_heat(
+        &self,
+        calibration_data: &CalibrationData,
+        ambient_temperature: i32,
+    ) -> u8 {
         // cap at 400°C
         let target_temperature = if self.heater_target_temperature > MAX_HEATER_TEMPERATURE {
             warn!(
@@ -155,18 +155,19 @@ impl GasConfig {
         } else {
             self.heater_target_temperature
         };
-        let var1 = (f32::from(calibration_data.par_gh1) / 16.) + 49.;
-        let var2 = ((f32::from(calibration_data.par_gh2) / 32768.0) * (0.0005)) + 0.00235;
-        let var3 = f32::from(calibration_data.par_gh3) / (1024.0);
-        let var4 = var1 * (1.0 + (var2 * f32::from(target_temperature)));
-        let var5 = var4 + (var3 * f32::from(ambient_temperature));
-        (3.4 * ((var5
-            * (4. / (4. + f32::from(calibration_data.res_heat_range)))
-            * (1. / (1. + (f32::from(calibration_data.res_heat_val) * 0.002))))
-            - 25.)) as u8
+        let var1 = ((ambient_temperature * i32::from(calibration_data.par_gh3)) / 1000) * 256;
+        let var2 = (i32::from(calibration_data.par_gh1) + 784)
+            * (((((i32::from(calibration_data.par_gh2) + 154009) * i32::from(target_temperature) * 5)
+                / 100)
+                + 3276800)
+                / 10);
+        let var3 = var1 + (var2 / 2);
+        let var4 = var3 / (i32::from(calibration_data.res_heat_range) + 4);
+        let var5 = (131 * i32::from(calibration_data.res_heat_val)) + 65536;
+        let heatr_res_x100 = ((var4 / var5) - 250) * 34;
+        ((heatr_res_x100 + 50) / 100) as u8
     }
-    #[must_use]
-    pub fn heater_duration(&self) -> Duration {
+    #[must_use] pub fn heater_duration(&self) -> Duration {
         self.heater_duration
     }
 }
@@ -217,8 +218,7 @@ impl Default for Configuration {
     }
 }
 impl Configuration {
-    #[must_use]
-    pub fn builder() -> ConfigBuilder {
+    #[must_use] pub fn builder() -> ConfigBuilder {
         ConfigBuilder {
             config: Configuration::default(),
         }
@@ -251,6 +251,7 @@ impl Configuration {
 
         measurement_duration
     }
+
 }
 pub struct ConfigBuilder {
     config: Configuration,
@@ -293,8 +294,7 @@ pub enum Oversampling {
     By16,
 }
 impl Oversampling {
-    #[must_use]
-    pub fn cycles(&self) -> u32 {
+    #[must_use] pub fn cycles(&self) -> u32 {
         match self {
             Self::Skipped => 0,
             Self::By1 => 1,
